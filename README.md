@@ -2,8 +2,8 @@ consider this a preview repository for now.  as-is it's incomplete.  in the comi
 
 # Force Curve Meter V2
 
-main.ino is the microcontroller firmware.  it is designed around a teensy 4.0, HX711, and a4988.  it should require minimal modification to run on other microcontrollers, but that's on you
-fdm.py is a minimal command line interface. note that it expects raw adc values for the threshold.  the final entry point will allow you to use grams but this is incomplete
+main.ino is the microcontroller firmware.  it is designed around a teensy 4.0, HX711, and a4988.  it should require minimal modification to run on other microcontrollers, but that's on you  
+fdm.py is a minimal command line interface.  usage details are below
 
 the device firmware is designed to be as dumb as possible.  it essentially just handles serial input and outputs the absolute position (in microsteps) and HX711 data (raw adc output) to serial console in a CSV format.  
 
