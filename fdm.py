@@ -4,10 +4,6 @@ import csv
 import serial
 
 
-# =========================
-# Backend Layer
-# =========================
-
 class SerialBackend:
     def send(self, cmd: str):
         raise NotImplementedError
@@ -30,14 +26,10 @@ class RealSerialBackend(SerialBackend):
         return line if line else None
 
 
-# =========================
-# PHYSICS-AWARE MOCK (FIXED)
-# =========================
-
 class MockBackend(SerialBackend):
     def __init__(self):
         self.pos = 0
-        self.direction = 1  # 1 = loading, -1 = unloading
+        self.direction = 1  
 
     def send(self, cmd: str):
         if cmd.startswith("D1"):
@@ -46,21 +38,15 @@ class MockBackend(SerialBackend):
             self.direction = -1
 
     def read_line(self):
-        # simulate step motion
         self.pos += self.direction
 
         if self.pos < 0:
             self.pos = 0
 
-        # simulated force curve (simple spring model + slight nonlinearity)
         force = int((self.pos * 900) + (0.02 * self.pos ** 2))
 
         return f"{self.pos},{force}"
 
-
-# =========================
-# Controller
-# =========================
 
 class Controller:
     def __init__(self, port, baud=115200, timeout=1.0, mock=False, debug=False):
@@ -83,10 +69,6 @@ class Controller:
         return line
 
 
-# =========================
-# Parsing
-# =========================
-
 def parse_line(line):
     if not line:
         return None
@@ -101,9 +83,6 @@ def parse_line(line):
         return None
 
 
-# =========================
-# Test Loop
-# =========================
 
 def run_test(ctrl, threshold, settle=200):
     data = []
@@ -133,9 +112,6 @@ def run_test(ctrl, threshold, settle=200):
             if ctrl.debug:
                 print(f"POS={pos} FORCE={force} STATE={state}")
 
-            # =========================
-            # STATE MACHINE
-            # =========================
 
             if state == "LOAD":
                 if force >= threshold:
@@ -154,9 +130,6 @@ def run_test(ctrl, threshold, settle=200):
     return data
 
 
-# =========================
-# CSV Output
-# =========================
 
 def save_csv(path, data):
     if not data:
@@ -171,9 +144,6 @@ def save_csv(path, data):
     print(f"Saved {len(data)} rows → {path}")
 
 
-# =========================
-# CLI
-# =========================
 
 def main():
     parser = argparse.ArgumentParser()
