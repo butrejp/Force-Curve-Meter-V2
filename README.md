@@ -24,3 +24,10 @@ create BOM
 finalize+upload linear stage design  
 create client side control software  
 create data parsing software  
+
+
+
+
+
+
+the code in this repository is broadly hardware agnostic and should apply to any force curve machine you might build.  buy a linear stage off aliexpress, port it to arduino, whatever you want to do.  nothing is non-negotiable 
