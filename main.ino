@@ -1,21 +1,21 @@
 #include <AccelStepper.h>
 #include "HX711.h"
-
-// pin assignments
+// ====================setup area====================
 #define STEP_PIN 3
 #define DIR_PIN 4
+
+AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
+
 #define DOUT 6
 #define CLK 7
 
 HX711 scale;
-AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
 long position = 0;
 int direction = 1;
 
 unsigned long settleTime = 200;
 
-// setup
 void setup() {
   Serial.begin(115200);
 
@@ -28,10 +28,10 @@ void setup() {
   Serial.println("READY");
 }
 
-// main loop
+// ==================end setup area==================
 void loop() {
 
-  stepper.run();
+  stepper.run();  
 
   if (Serial.available()) {
 
@@ -54,55 +54,71 @@ void loop() {
       Serial.println(settleTime);
     }
 
-    else if (cmd == "S") {
+    else if (cmd == "Z") {
 
-      if (direction == 1) position += 1;
-      else position -= 1;
+      scale.tare();
+      Serial.println("ZEROED");
+    }
 
-      stepper.moveTo(position);
+    else if (cmd.startsWith("S") && !cmd.startsWith("SR")) {
 
-      while (stepper.distanceToGo() != 0) {
-        stepper.run();
+      int steps = cmd.substring(1).toInt();
+      if (steps == 0) steps = 1;
+
+      for (int i = 0; i < steps; i++) {
+
+        if (direction == 1) position += 1;
+        else position -= 1;
+
+        stepper.moveTo(position);
+
+        while (stepper.distanceToGo() != 0) {
+          stepper.run();
+        }
       }
 
       Serial.println("STEPPED");
     }
 
-    else if (cmd == "SR") {
+    else if (cmd.startsWith("SR")) {
 
-      if (direction == 1) position += 1;
-      else position -= 1;
+      int steps = cmd.substring(2).toInt();
+      if (steps == 0) steps = 1;
 
-      stepper.moveTo(position);
+      for (int i = 0; i < steps; i++) {
 
-      while (stepper.distanceToGo() != 0) {
-        stepper.run();
+        if (direction == 1) position += 1;
+        else position -= 1;
+
+        stepper.moveTo(position);
+
+        while (stepper.distanceToGo() != 0) {
+          stepper.run();
+        }
+
+        delay(settleTime);
+
+        long reading = scale.read();
+
+        Serial.print(position);
+        Serial.print(",");
+        Serial.println(reading);
       }
-
-      delay(settleTime);
-
-      long reading = scale.read();
-
-
-      Serial.print(position);
-      Serial.print(",");
-      Serial.println(reading);
     }
 
-    else if (cmd == "R") {
+    else if (cmd.startsWith("R")) {
 
-      long reading = scale.read();
+      int reads = cmd.substring(1).toInt();
+      if (reads == 0) reads = 1;
 
+      for (int i = 0; i < reads; i++) {
 
-      Serial.print(position);
-      Serial.print(",");
-      Serial.println(reading);
-    }
+        long reading = scale.read();
 
-    else if (cmd == "Z") {
-
-      scale.tare();
-      Serial.println("ZEROED");
+        Serial.print(position);
+        Serial.print(",");
+        Serial.println(reading);
+      }
     }
   }
 }
