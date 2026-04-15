@@ -8,13 +8,12 @@ the device firmware is designed to be as dumb as possible.  it essentially just 
 
 firmware controls:
 ```
-S - Move one step (mostly useful for diagnostics or travel commands)  
-SR - Move and read  
-R - read without moving  
-D 1 - set direction: loading  
-D 0 - set direction: unloading  
-W 200 - set settle time for SR command  
-Z - tare load cell
+S<n>  - step n number of times 
+SR<n> - step and read n number of times 
+R<n>  - read without moving n number of times
+D<n>  - set direction (1 loading, 0 unloading)   
+W<n>  - set settle time for SR command  
+Z     - tare load cell
 ```
 
 additional data will be uploaded soon.
