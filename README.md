@@ -1,7 +1,7 @@
 consider this a preview repository for now.  as-is it's incomplete.  in the coming days/weeks it will become less incomplete
 > [!WARNING]  
 > Do not attempt to use this until further testing and validation has been done.  
-> [!I am not responsible for any damage that occurs because you ignored this warning.]  
+> I am not responsible for any damage that occurs because you ignored this warning.  
 only partial testing has been done, as not all the hardware has come in the mail yet.  I'll go over any bugs as I receive the hardware
 
 # Force Curve Meter V2
