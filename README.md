@@ -1,8 +1,9 @@
-consider this a preview repository for now.  as-is it's incomplete.  in the coming weeks it will become less incomplete
+consider this a preview repository for now.  as-is it's incomplete.  in the coming days/weeks it will become less incomplete
 
 # Force Curve Meter V2
 
 main.ino is the microcontroller firmware.  it is designed around a teensy 4.0, HX711, and a4988.  it should require minimal modification to run on other microcontrollers, but that's on you
+fdm.py is a minimal command line interface. note that it expects raw adc values for the threshold.  the final entry point will allow you to use grams but this is incomplete
 
 the device firmware is designed to be as dumb as possible.  it essentially just handles serial input and outputs the absolute position (in microsteps) and HX711 data (raw adc output) to serial console in a CSV format.  
 
@@ -15,13 +16,17 @@ D<n>  - set direction (1 loading, 0 unloading)
 W<n>  - set settle time for SR command  
 Z     - tare load cell
 ```
+fdm.py usage
+```
+fdm.py [-h] [--port PORT] [--threshold THRESHOLD] [--settle SETTLE] [--out OUT] [--mock] [--debug]
+```
 
 additional data will be uploaded soon.
 
 ## TODO ##  
 create BOM  
 finalize+upload linear stage design  
-create client side control software  
+create calibration software
 create data parsing software  
 
 
