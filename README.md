@@ -17,8 +17,8 @@ Z - tare load cell
 
 additional data will be uploaded soon.
 
-## TODO ##
-create BOM
-finalize+upload linear stage design
-create client side control software
-create data parsing software
+## TODO ##  
+create BOM  
+finalize+upload linear stage design  
+create client side control software  
+create data parsing software  
