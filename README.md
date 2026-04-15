@@ -27,7 +27,7 @@ Run a load-unload force-displacement test.
 
 required arguments:
   --threshold THRESHOLD
-                        Force threshold (gf) that triggers reversal from LOAD to UNLOAD
+                        Force threshold (gf if calibration provided, otherwise raw adc value) that triggers reversal from LOAD to UNLOAD
 
 optional arguments:
   -h, --help            show this help message and exit
