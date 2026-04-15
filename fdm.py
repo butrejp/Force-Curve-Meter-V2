@@ -1,169 +1,236 @@
 import argparse
-import time
 import csv
-import serial
+import time
+
+try:
+    import serial
+except ImportError:
+    serial = None
 
 
-class SerialBackend:
-    def send(self, cmd: str):
-        raise NotImplementedError
 
-    def read_line(self) -> str | None:
-        raise NotImplementedError
+def load_calibration(path):
+    xs, ys = [], []
+
+    with open(path, "r", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            ys.append(float(row["gf"]))
+            xs.append(float(row["counts"]))
+
+    if len(xs) < 2:
+        raise ValueError("Need at least 2 calibration points")
+
+    n = len(xs)
+    sx = sum(xs)
+    sy = sum(ys)
+    sxx = sum(x * x for x in xs)
+    sxy = sum(x * y for x, y in zip(xs, ys))
+
+    denom = n * sxx - sx * sx
+    if denom == 0:
+        raise ValueError("Bad calibration data")
+
+    a = (n * sxy - sx * sy) / denom
+    b = (sy - a * sx) / n
+
+    return a, b
 
 
-class RealSerialBackend(SerialBackend):
-    def __init__(self, port, baud=115200, timeout=1.0):
-        self.ser = serial.Serial(port, baud, timeout=timeout)
-        time.sleep(2)
-        self.ser.reset_input_buffer()
+def apply_calibration(raw, calib):
+    if calib is None:
+        return raw
+    a, b = calib
+    return a * raw + b
 
-    def send(self, cmd: str):
-        self.ser.write((cmd + "\n").encode())
-
-    def read_line(self):
-        line = self.ser.readline().decode(errors="ignore").strip()
-        return line if line else None
-
-
-class MockBackend(SerialBackend):
-    def __init__(self):
-        self.pos = 0
-        self.direction = 1  
-
-    def send(self, cmd: str):
-        if cmd.startswith("D1"):
-            self.direction = 1
-        elif cmd.startswith("D0"):
-            self.direction = -1
-
-    def read_line(self):
-        self.pos += self.direction
-
-        if self.pos < 0:
-            self.pos = 0
-
-        force = int((self.pos * 900) + (0.02 * self.pos ** 2))
-
-        return f"{self.pos},{force}"
 
 
 class Controller:
-    def __init__(self, port, baud=115200, timeout=1.0, mock=False, debug=False):
-        self.debug = debug
+    def __init__(self, port=None, baud=115200, timeout=1, mock=False):
+        self.mock = mock
 
-        if mock:
-            self.backend = MockBackend()
+        if not mock:
+            if serial is None:
+                raise RuntimeError("pyserial not installed")
+            self.ser = serial.Serial(port, baud, timeout=timeout)
+            time.sleep(2)
         else:
-            self.backend = RealSerialBackend(port, baud, timeout)
+            self.ser = None
+            self.pos = 0
+            self.force = 0
+            self.dir = 1
 
-    def send(self, cmd: str):
-        if self.debug:
+    def write(self, cmd: str):
+        if self.mock:
             print(f">>> SEND: {cmd}")
-        self.backend.send(cmd)
+            return
+        assert self.ser is not None
+        self.ser.write((cmd + "\n").encode())
 
     def read_line(self):
-        line = self.backend.read_line()
-        if self.debug and line:
-            print(f"<<< RX: {line}")
-        return line
+        if self.mock:
+            self.pos += self.dir
+            self.force += 900 * self.dir
+            return f"{self.pos},{self.force}"
 
-
-def parse_line(line):
-    if not line:
-        return None
-
-    parts = line.split(",")
-    if len(parts) != 2:
-        return None
-
-    try:
-        return int(parts[0]), int(parts[1])
-    except ValueError:
-        return None
+        assert self.ser is not None
+        return self.ser.readline().decode(errors="ignore").strip()
 
 
 
-def run_test(ctrl, threshold, settle=200):
+def run_test(ctrl, threshold, calib=None, debug=False):
     data = []
-
     state = "LOAD"
 
-    print("Running test...")
-    print(f"Threshold: {threshold}")
+    ctrl.write("W200")
+    ctrl.write("D1")
 
-    ctrl.send(f"W{settle}")
-    ctrl.send("D1")
+    if debug:
+        print(f"Threshold: {threshold}")
 
     try:
         while True:
+            ctrl.write("SR1")
 
-            ctrl.send("SR1")
             line = ctrl.read_line()
-
-            parsed = parse_line(line)
-            if not parsed:
+            if not line:
                 continue
 
-            pos, force = parsed
+            try:
+                pos_s, raw_s = line.split(",")
+                pos = int(pos_s)
+                raw = float(raw_s)
+            except:
+                continue
+
+            force = apply_calibration(raw, calib)
+
+            if debug:
+                print(f"POS={pos} FORCE={force:.2f} gf STATE={state}")
+
+            if state == "LOAD" and force >= threshold:
+                state = "UNLOAD"
+                ctrl.write("D0")
+                if debug:
+                    print(">>> THRESHOLD HIT → reversing")
+
+            if state == "UNLOAD" and pos <= 0:
+                if debug:
+                    print(">>> RETURNED TO ZERO → stop")
+                break
 
             data.append((pos, force, state))
 
-            if ctrl.debug:
-                print(f"POS={pos} FORCE={force} STATE={state}")
-
-
-            if state == "LOAD":
-                if force >= threshold:
-                    print("Threshold hit → reversing")
-                    state = "UNLOAD"
-                    ctrl.send("D0")
-
-            elif state == "UNLOAD":
-                if pos <= 0:
-                    print("Returned to zero → stopping")
-                    break
-
     except KeyboardInterrupt:
-        print("\nInterrupted by user")
+        if debug:
+            print("\nInterrupted")
 
     return data
 
 
 
-def save_csv(path, data):
+def run_calibration(ctrl, samples=100, out="calib.csv"):
+    print("\nCalibration mode")
+    print("Enter known force in gf for each sample.")
+    print("Blank input → finish\n")
+
+    data = []
+
+    try:
+        for i in range(samples):
+            inp = input(f"[{i}] gf (blank to finish): ").strip()
+            if inp == "":
+                break
+
+            gf = float(inp)
+
+            ctrl.write("R1")
+            time.sleep(0.2)
+
+            line = ctrl.read_line()
+            if not line:
+                continue
+
+            try:
+                _, raw = line.split(",")
+                raw = float(raw)
+            except:
+                continue
+
+            print(f"   raw={raw} gf={gf}")
+            data.append((gf, raw))
+
+    except KeyboardInterrupt:
+        print("\nCalibration interrupted")
+
     if not data:
-        print("No data collected - nothing saved.")
+        print("No calibration data collected.")
         return
 
-    with open(path, "w", newline="") as f:
+    with open(out, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["position", "force", "state"])
+        w.writerow(["gf", "counts"])
         w.writerows(data)
 
-    print(f"Saved {len(data)} rows → {path}")
+    print(f"Saved calibration → {out}")
+
+
+
+def save_csv(path, data):
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["position", "force_gf", "state"])
+        w.writerows(data)
 
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", default="COM3")
-    parser.add_argument("--threshold", type=int, default=5000)
-    parser.add_argument("--settle", type=int, default=200)
-    parser.add_argument("--out", default="output.csv")
-    parser.add_argument("--mock", action="store_true")
-    parser.add_argument("--debug", action="store_true")
+    p = argparse.ArgumentParser()
+    sub = p.add_subparsers(dest="cmd")
 
-    args = parser.parse_args()
+    t = sub.add_parser("test")
+    t.add_argument("--port", default="COM3")
+    t.add_argument("--threshold", type=float, required=True)
+    t.add_argument("--out", default="out.csv")
+    t.add_argument("--mock", action="store_true")
+    t.add_argument("--debug", action="store_true")
+    t.add_argument("--calib", default=None)
 
-    ctrl = Controller(
-        port=args.port,
-        mock=args.mock,
-        debug=args.debug
-    )
+    c = sub.add_parser("calib")
+    c.add_argument("--port", default="COM3")
+    c.add_argument("--out", default="calib.csv")
+    c.add_argument("--mock", action="store_true")
+    c.add_argument("--samples", type=int, default=100)
 
-    data = run_test(ctrl, args.threshold, args.settle)
-    save_csv(args.out, data)
+    args = p.parse_args()
+
+    ctrl = Controller(port=args.port, mock=getattr(args, "mock", False))
+
+    if args.cmd == "calib":
+        run_calibration(ctrl, samples=args.samples, out=args.out)
+        return
+
+    if args.cmd == "test":
+        calib = load_calibration(args.calib) if args.calib else None
+
+        print("Running test...")
+
+        data = run_test(
+            ctrl,
+            threshold=args.threshold,
+            calib=calib,
+            debug=args.debug
+        )
+
+        if not data:
+            print("No data collected - nothing saved.")
+            return
+
+        save_csv(args.out, data)
+        print(f"Saved {len(data)} rows → {args.out}")
+        return
+
+    print("No command specified")
 
 
 if __name__ == "__main__":
