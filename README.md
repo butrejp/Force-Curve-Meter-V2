@@ -18,7 +18,38 @@ Z     - tare load cell
 ```
 fdm.py usage
 ```
-fdm.py [-h] [--port PORT] [--threshold THRESHOLD] [--settle SETTLE] [--out OUT] [--mock] [--debug]
+TEST MODE
+---------
+usage: fdm.py test [-h] [--port PORT] --threshold THRESHOLD [--out OUT]
+                   [--mock] [--debug] [--calib CALIB]
+
+Run a load-unload force-displacement test.
+
+required arguments:
+  --threshold THRESHOLD
+                        Force threshold (gf) that triggers reversal from LOAD to UNLOAD
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --port PORT           Serial port (default: COM3)
+  --out OUT             Output CSV file (default: out.csv)
+  --mock                Run without hardware (simulated controller)
+  --debug               Print live state updates during execution
+  --calib CALIB         Calibration CSV file (gf,counts) used to convert raw readings
+
+  CALIBRATION MODE
+----------------
+usage: fdm.py calib [-h] [--port PORT] [--out OUT] [--mock]
+                    [--samples SAMPLES]
+
+Run interactive calibration routine using known force values.
+
+optional arguments:
+  -h, --help         show this help message and exit
+  --port PORT        Serial port (default: COM3)
+  --out OUT          Output calibration file (default: calib.csv)
+  --mock             Run without hardware (simulated controller)
+  --samples SAMPLES  Maximum number of calibration points (default: 100)
 ```
 
 additional data will be uploaded soon.
