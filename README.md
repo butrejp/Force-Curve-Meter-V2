@@ -1,5 +1,7 @@
 consider this a preview repository for now.  as-is it's incomplete.  in the coming days/weeks it will become less incomplete
 
+only partial testing has been done, as not all the hardware has come in the mail yet.  I'll go over any bugs as I receive the hardware
+
 # Force Curve Meter V2
 
 main.ino is the microcontroller firmware.  it is designed around a teensy 4.0, HX711, and a4988.  it should require minimal modification to run on other microcontrollers, but that's on you  
@@ -64,4 +66,4 @@ create data parsing software
 
 
 
-the code in this repository is broadly hardware agnostic and should apply to any force curve machine you might build.  buy a linear stage off aliexpress, port it to arduino, whatever you want to do.  nothing is non-negotiable 
+the code in this repository is broadly hardware agnostic and should apply to any force curve machine you might build so long as the featureset lines up.  buy a linear stage off aliexpress, port it to arduino, whatever you want to do.  nothing is non-negotiable, 
