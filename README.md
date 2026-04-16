@@ -61,7 +61,6 @@ optional arguments:
 additional data will be uploaded soon.
 
 ## TODO ##  
-create BOM  
 finalize+upload linear stage design  
 create data parsing software  
 
