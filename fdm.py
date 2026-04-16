@@ -239,20 +239,30 @@ def main():
     sub = p.add_subparsers(dest="cmd")
 
     t = sub.add_parser("test")
-    t.add_argument("--port", default="COM3")
-    t.add_argument("--threshold", type=float, required=True)
-    t.add_argument("--out", default="out.csv")
-    t.add_argument("--mock", action="store_true")
-    t.add_argument("--debug", action="store_true")
-    t.add_argument("--calib", default=None)
+    t.add_argument("--port", default="COM3",
+                   help="Serial port (default: COM3)")
+    t.add_argument("--threshold", type=float, required=True,
+                   help="Force threshold (gf if calibration provided, otherwise raw adc value)")
+    t.add_argument("--out", default="out.csv",
+                   help="Output CSV file (default: out.csv)")
+    t.add_argument("--mock", action="store_true",       
+                   help="Use mock controller (no hardware)")
+    t.add_argument("--debug", action="store_true",
+                   help="Enable debug output")
+    t.add_argument("--calib", default=None,
+                   help="Calibration CSV file (optional)")
     t.add_argument("--spmm", type=float, default=None,
                    help="Steps per mm (enables mm output column)")
 
     c = sub.add_parser("calib")
-    c.add_argument("--port", default="COM3")
-    c.add_argument("--out", default="calib.csv")
-    c.add_argument("--mock", action="store_true")
-    c.add_argument("--samples", type=int, default=100)
+    c.add_argument("--port", default="COM3",
+                   help="Serial port (default: COM3)")
+    c.add_argument("--out", default="calib.csv",
+                   help="Output CSV file (default: calib.csv)")
+    c.add_argument("--mock", action="store_true",
+                   help="Use mock controller (no hardware)")
+    c.add_argument("--samples", type=int, default=100,
+                   help="Maximum number of calibration samples (default: 100)")
 
     args = p.parse_args()
 
