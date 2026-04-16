@@ -41,6 +41,7 @@ optional arguments:
   --mock                Run without hardware (simulated controller)
   --debug               Print live state updates during execution
   --calib CALIB         Calibration CSV file (gf,counts) used to convert raw readings
+  --spmm SPMM           Steps per mm (enables mm output column)
 
   CALIBRATION MODE
 ----------------
