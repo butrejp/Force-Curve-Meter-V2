@@ -8,7 +8,6 @@ except ImportError:
     serial = None
 
 
-
 def load_calibration(path):
     xs, ys = [], []
 
@@ -44,7 +43,6 @@ def apply_calibration(raw, calib):
     return a * raw + b
 
 
-
 class Controller:
     def __init__(self, port=None, baud=115200, timeout=1, mock=False):
         self.mock = mock
@@ -58,27 +56,65 @@ class Controller:
             self.ser = None
             self.pos = 0
             self.force = 0
-            self.dir = 1
+            self.dir = 1  # 1 = load, -1 = unload
+            self.settle = 0
+            self.last_cmd = None
 
     def write(self, cmd: str):
         if self.mock:
             print(f">>> SEND: {cmd}")
+            self.last_cmd = cmd
+
+            if cmd.startswith("SR"):
+                return
+
+            elif cmd.startswith("S"):
+                n = int(cmd[1:])
+                self.pos += n * self.dir
+                self.force += 900 * n * self.dir
+                return
+
+            elif cmd.startswith("D"):
+                val = int(cmd[1:])
+                self.dir = 1 if val == 1 else -1
+                return
+
+            elif cmd.startswith("W"):
+                self.settle = int(cmd[1:])
+                return
+
+            elif cmd.startswith("R"):
+                self.force += 1000
+                return
+
             return
+
         assert self.ser is not None
         self.ser.write((cmd + "\n").encode())
 
     def read_line(self):
         if self.mock:
-            self.pos += self.dir
-            self.force += 900 * self.dir
+            if self.last_cmd and self.last_cmd.startswith("SR"):
+                self.pos += self.dir
+                self.force += 900 * self.dir
+
+            elif self.last_cmd and self.last_cmd.startswith("S"):
+                pass
+
+            elif self.last_cmd and self.last_cmd.startswith("R"):
+                pass
+
+            if self.pos <= 0:
+                self.pos = 0
+                self.force = max(0, self.force)
+
             return f"{self.pos},{self.force}"
 
         assert self.ser is not None
         return self.ser.readline().decode(errors="ignore").strip()
 
 
-
-def run_test(ctrl, threshold, calib=None, debug=False):
+def run_test(ctrl, threshold, calib=None, debug=False, spmm=None):
     data = []
     state = "LOAD"
 
@@ -100,7 +136,9 @@ def run_test(ctrl, threshold, calib=None, debug=False):
                 pos_s, raw_s = line.split(",")
                 pos = int(pos_s)
                 raw = float(raw_s)
-            except:
+            except Exception as e:
+                if debug:
+                    print(f"Parse error: {line} ({e})")
                 continue
 
             force = apply_calibration(raw, calib)
@@ -119,14 +157,18 @@ def run_test(ctrl, threshold, calib=None, debug=False):
                     print(">>> RETURNED TO ZERO → stop")
                 break
 
-            data.append((pos, force, state))
+            if spmm:
+                mm = pos / spmm
+            else:
+                mm = None
+
+            data.append((pos, mm, force, state))
 
     except KeyboardInterrupt:
         if debug:
             print("\nInterrupted")
 
     return data
-
 
 
 def run_calibration(ctrl, samples=100, out="calib.csv"):
@@ -175,13 +217,21 @@ def run_calibration(ctrl, samples=100, out="calib.csv"):
     print(f"Saved calibration → {out}")
 
 
-
-def save_csv(path, data):
+def save_csv(path, data, spmm=None):
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["position", "force_gf", "state"])
-        w.writerows(data)
 
+        if spmm:
+            w.writerow(["position_steps", "position_mm", "force_gf", "state"])
+        else:
+            w.writerow(["position_steps", "force_gf", "state"])
+
+        for row in data:
+            if spmm:
+                w.writerow(row)
+            else:
+                steps, _, force, state = row
+                w.writerow([steps, force, state])
 
 
 def main():
@@ -195,6 +245,8 @@ def main():
     t.add_argument("--mock", action="store_true")
     t.add_argument("--debug", action="store_true")
     t.add_argument("--calib", default=None)
+    t.add_argument("--spmm", type=float, default=None,
+                   help="Steps per mm (enables mm output column)")
 
     c = sub.add_parser("calib")
     c.add_argument("--port", default="COM3")
@@ -203,6 +255,9 @@ def main():
     c.add_argument("--samples", type=int, default=100)
 
     args = p.parse_args()
+
+    if args.cmd == "test" and args.spmm is not None and args.spmm <= 0:
+        raise ValueError("spmm must be > 0")
 
     ctrl = Controller(port=args.port, mock=getattr(args, "mock", False))
 
@@ -219,14 +274,15 @@ def main():
             ctrl,
             threshold=args.threshold,
             calib=calib,
-            debug=args.debug
+            debug=args.debug,
+            spmm=args.spmm
         )
 
         if not data:
             print("No data collected - nothing saved.")
             return
 
-        save_csv(args.out, data)
+        save_csv(args.out, data, spmm=args.spmm)
         print(f"Saved {len(data)} rows → {args.out}")
         return
 
