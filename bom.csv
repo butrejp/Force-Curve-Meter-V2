@@ -1,0 +1,18 @@
+item no,qty,item,detail
+1,2,endplate,stl
+2,2,cap,stl
+3,1,carriage,stl
+4,1,toolholder,stl
+5,1,switchholder,stl
+6,16,threaded inserts,m3x4.5
+7,1,bearing,605
+8,1,stepper motor,nema17
+9,1,leadscrew,T8 x 100mm
+10,1,coupler,5mm x 8mm
+11,2,linear rails,8mm x 125mm
+12,4,LM8UU compatible bushings/bearings,igus rj4jp-01-08
+13,24,screws,m3x(I'll get specifics later)
+
+14,1,Teensy4.0
+15,1,HX711
+16,1,A4988,stepstick
