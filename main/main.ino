@@ -1,5 +1,6 @@
 #include <AccelStepper.h>
 #include "HX711.h"
+
 // ====================setup area====================
 #define STEP_PIN 1
 #define DIR_PIN 2
@@ -31,7 +32,7 @@ void setup() {
 // ==================end setup area==================
 void loop() {
 
-  stepper.run();  
+  stepper.run();
 
   if (Serial.available()) {
 
@@ -98,6 +99,8 @@ void loop() {
 
         delay(settleTime);
 
+        while (!scale.is_ready());
+
         long reading = scale.read();
 
         Serial.print(position);
@@ -112,6 +115,8 @@ void loop() {
       if (reads == 0) reads = 1;
 
       for (int i = 0; i < reads; i++) {
+
+        while (!scale.is_ready());
 
         long reading = scale.read();
 
