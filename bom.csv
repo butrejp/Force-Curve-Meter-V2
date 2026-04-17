@@ -12,7 +12,6 @@ item no,qty,item,detail
 11,2,linear rails,8mm x 125mm
 12,4,LM8UU compatible bushings/bearings,igus rj4jp-01-08
 13,24,screws,m3x(I'll get specifics later)
-
 14,1,Teensy4.0
 15,1,HX711
 16,1,A4988,stepstick
