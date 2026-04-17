@@ -1,13 +1,13 @@
 #include <AccelStepper.h>
 #include "HX711.h"
 // ====================setup area====================
-#define STEP_PIN 3
-#define DIR_PIN 4
+#define STEP_PIN 1
+#define DIR_PIN 2
 
 AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
-#define DOUT 6
-#define CLK 7
+#define DOUT 18
+#define CLK 17
 
 HX711 scale;
 
